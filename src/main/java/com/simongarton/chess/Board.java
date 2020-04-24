@@ -1,8 +1,14 @@
 package com.simongarton.chess;
 
+import com.simongarton.chess.model.Move;
 import com.simongarton.chess.model.Piece;
+import com.simongarton.chess.model.PieceOnBoard;
 import com.simongarton.chess.model.Side;
 import lombok.Getter;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static com.simongarton.chess.model.Piece.*;
 import static com.simongarton.chess.model.Side.BLACK;
@@ -12,13 +18,14 @@ import static com.simongarton.chess.model.Side.WHITE;
 public class Board {
 
     private String board;
+    public static final String EMPTY_SYMBOL = ".";
 
     public Board() {
         clearBoard();
     }
 
     public void clearBoard() {
-        board = fillString('.', 64);
+        board = fillString(EMPTY_SYMBOL.charAt(0), 64);
     }
 
     private String fillString(char fillChar, int count) {
@@ -50,7 +57,7 @@ public class Board {
     }
 
     public void setupDefaultBoard() {
-        board = fillString('.', 64);
+        board = fillString(EMPTY_SYMBOL.charAt(0), 64);
         for (int file = 1; file <= 8; file++) {
             addPiece(WHITE, PAWN, fileLetter(file) + "2");
             addPiece(BLACK, PAWN, fileLetter(file) + "7");
@@ -73,12 +80,19 @@ public class Board {
         addPiece(BLACK, ROOK, fileLetter(8) + "8");
     }
 
-    private void addPiece(Side side, Piece piece, String square) {
+    protected void addPiece(Side side, Piece piece, String square) {
         int file = fileNumberFromSquare(square);
         int rank = rankNumberFromSquare(square);
         int index = boardIndex(file, rank);
         //System.out.println(square + " " + file + " " + rank + " " + index);
         board = board.substring(0, index) + getPieceSymbol(side, piece) + board.substring(index + 1, 64);
+    }
+
+    private void removePiece(String square) {
+        int file = fileNumberFromSquare(square);
+        int rank = rankNumberFromSquare(square);
+        int index = boardIndex(file, rank);
+        board = board.substring(0, index) + EMPTY_SYMBOL + board.substring(index + 1, 64);
     }
 
     public String getSymbol(int file, int rank) {
@@ -96,6 +110,21 @@ public class Board {
             return null;
         }
         return Piece.fromSymbol(symbol);
+    }
+
+    public PieceOnBoard getPieceOnBoard(int file, int rank) {
+        if ((file < 1) || (file > 8)) return null;
+        if ((rank < 1) || (rank > 8)) return null;
+        Piece piece = getPiece(file, rank);
+        if (piece == null) {
+            return null;
+        }
+        Side side = getSide(file, rank);
+        return PieceOnBoard.builder()
+                .piece(piece)
+                .side(side)
+                .square(square(file, rank))
+                .build();
     }
 
     public Side getSide(int file, int rank) {
@@ -130,7 +159,11 @@ public class Board {
     }
 
     public int getBoardValue(Side side) {
-        int value = 0;
+        return getPieces(side).stream().mapToInt(c -> c.getPiece().getValue()).sum();
+    }
+
+    public List<PieceOnBoard> getPieces(Side side) {
+        List<PieceOnBoard> pieces = new ArrayList<>();
         for (int file = 1; file <= 8; file++) {
             for (int rank = 1; rank <= 8; rank++) {
                 Piece piece = getPiece(file, rank);
@@ -139,10 +172,287 @@ public class Board {
                 }
                 Side pieceSide = getSide(file, rank);
                 if (side.equals(pieceSide)) {
-                    value = value + piece.getValue();
+                    pieces.add(PieceOnBoard.builder()
+                            .piece(piece)
+                            .side(side)
+                            .square(square(file, rank))
+                            .build());
                 }
             }
         }
-        return value;
+        return pieces;
+    }
+
+    private String square(int file, int rank) {
+        return fileLetter(file) + rank;
+    }
+
+    public List<Move> getMoves(Side side) {
+        List<Move> moves = new ArrayList<>();
+        for (PieceOnBoard piece : getPieces(side)) {
+            moves.addAll(getMovesForPiece(piece));
+        }
+        return moves;
+    }
+
+    private List<Move> getMovesForPiece(PieceOnBoard piece) {
+        switch (piece.getPiece()) {
+            case KING:
+                return getMovesForKing(piece);
+            case QUEEN:
+                return getMovesForQueen(piece);
+            case BISHOP:
+                return getMovesForBishop(piece);
+            case KNIGHT:
+                return getMovesForKnight(piece);
+            case ROOK:
+                return getMovesForRook(piece);
+            case PAWN:
+                return getMovesForPawn(piece);
+            default:
+                return Collections.emptyList();
+        }
+    }
+
+    protected List<Move> getMovesForQueen(PieceOnBoard piece) {
+        List<Move> moves = new ArrayList<>();
+        moves.addAll(getSlidingMove(-1, -1, piece));
+        moves.addAll(getSlidingMove(1, -1, piece));
+        moves.addAll(getSlidingMove(-1, 1, piece));
+        moves.addAll(getSlidingMove(1, 1, piece));
+        moves.addAll(getSlidingMove(-1, 0, piece));
+        moves.addAll(getSlidingMove(1, 0, piece));
+        moves.addAll(getSlidingMove(0, -1, piece));
+        moves.addAll(getSlidingMove(0, 1, piece));
+        return moves;
+    }
+
+    protected List<Move> getMovesForBishop(PieceOnBoard piece) {
+        List<Move> moves = new ArrayList<>();
+        moves.addAll(getSlidingMove(-1, -1, piece));
+        moves.addAll(getSlidingMove(1, -1, piece));
+        moves.addAll(getSlidingMove(-1, 1, piece));
+        moves.addAll(getSlidingMove(1, 1, piece));
+        return moves;
+    }
+
+    protected List<Move> getMovesForKnight(PieceOnBoard piece) {
+        List<Move> moves = new ArrayList<>();
+        int rank = rankNumberFromSquare(piece.getSquare());
+        int file = fileNumberFromSquare(piece.getSquare());
+        Move move;
+        move = getMove(file - 2, rank - 1, piece);
+        if (move != null) moves.add(move);
+        move = getMove(file - 2, rank + 1, piece);
+        if (move != null) moves.add(move);
+        move = getMove(file + 2, rank - 1, piece);
+        if (move != null) moves.add(move);
+        move = getMove(file + 2, rank + 1, piece);
+        if (move != null) moves.add(move);
+        move = getMove(file - 1, rank - 2, piece);
+        if (move != null) moves.add(move);
+        move = getMove(file - 1, rank + 2, piece);
+        if (move != null) moves.add(move);
+        move = getMove(file + 1, rank - 2, piece);
+        if (move != null) moves.add(move);
+        move = getMove(file + 1, rank + 2, piece);
+        if (move != null) moves.add(move);
+        return moves;
+    }
+
+    protected List<Move> getMovesForRook(PieceOnBoard piece) {
+        List<Move> moves = new ArrayList<>();
+        moves.addAll(getSlidingMove(-1, 0, piece));
+        moves.addAll(getSlidingMove(1, 0, piece));
+        moves.addAll(getSlidingMove(0, -1, piece));
+        moves.addAll(getSlidingMove(0, 1, piece));
+        return moves;
+    }
+
+    private List<Move> getSlidingMove(int fileDelta, int rankDelta, PieceOnBoard piece) {
+        Move move;
+        List<Move> moves = new ArrayList<>();
+        int rank = rankNumberFromSquare(piece.getSquare());
+        int file = fileNumberFromSquare(piece.getSquare());
+        while (true) {
+            file = file + fileDelta;
+            rank = rank + rankDelta;
+            if ((file == 0) || (file == 9)) break;
+            if ((rank == 0) || (rank == 9)) break;
+            move = getMove(file, rank, piece);
+            if (move != null) {
+                moves.add(move);
+                break;
+            }
+//            move = getAttackMove(file, rank, piece);
+//            if (move != null) {
+//                moves.add(move);
+//                break;
+//            }
+        }
+        return moves;
+    }
+
+    protected List<Move> getMovesForPawn(PieceOnBoard piece) {
+        if (piece.getSide().equals(WHITE)) {
+            return getMovesForWhitePawn(piece);
+        } else {
+            return getMovesForBlackPawn(piece);
+        }
+    }
+
+    private List<Move> getMovesForWhitePawn(PieceOnBoard piece) {
+        List<Move> moves = new ArrayList<>();
+        int rank = rankNumberFromSquare(piece.getSquare());
+        int file = fileNumberFromSquare(piece.getSquare());
+        Move move;
+        move = getMoveOnly(file, rank + 1, piece);
+        if (move != null) moves.add(move);
+        if (rank == 2) {
+            move = getMoveOnly(file, rank + 2, piece);
+            if (move != null) moves.add(move);
+        }
+        move = getAttackMove(file - 1, rank + 1, piece);
+        if (move != null) moves.add(move);
+        move = getAttackMove(file + 1, rank + 1, piece);
+        if (move != null) moves.add(move);
+        // todo ENPASSANT
+        // todo PROMOTE
+        return moves;
+    }
+
+    private List<Move> getMovesForBlackPawn(PieceOnBoard piece) {
+        List<Move> moves = new ArrayList<>();
+        int rank = rankNumberFromSquare(piece.getSquare());
+        int file = fileNumberFromSquare(piece.getSquare());
+        Move move;
+        move = getMoveOnly(file, rank - 1, piece);
+        if (move != null) moves.add(move);
+        if (rank == 2) {
+            move = getMoveOnly(file, rank - 2, piece);
+            if (move != null) moves.add(move);
+        }
+        move = getAttackMove(file - 1, rank - 1, piece);
+        if (move != null) moves.add(move);
+        move = getAttackMove(file + 1, rank - 1, piece);
+        if (move != null) moves.add(move);
+        // todo ENPASSANT
+        // todo PROMOTE
+        return moves;
+    }
+
+    private Move getAttackMove(int file, int rank, PieceOnBoard piece) {
+        if (!onBoard(file, rank)) {
+            return null;
+        }
+        String symbol = getSymbol(file, rank);
+        if (symbol == null) {
+            return null;
+        }
+        PieceOnBoard pieceOnBoard = getPieceOnBoard(file, rank);
+        if (pieceOnBoard.getSide().equals(piece.getSide())) {
+            return null;
+        }
+        String toSquare = fileLetter(file) + rank;
+        Move move = Move.moveFromSquares(piece.getSquare(), toSquare);
+        move.setNotes("takes " + pieceOnBoard.description());
+        return move;
+    }
+
+    protected List<Move> getMovesForKing(PieceOnBoard piece) {
+        List<Move> moves = new ArrayList<>();
+        int rank = rankNumberFromSquare(piece.getSquare());
+        int file = fileNumberFromSquare(piece.getSquare());
+        Move move;
+        // TODO Castling
+        move = getMove(file - 1, rank - 1, piece);
+        if (move != null) if (legalForKing(piece, move)) moves.add(move);
+        move = getMove(file - 1, rank - 0, piece);
+        if (move != null) if (legalForKing(piece, move)) moves.add(move);
+        move = getMove(file - 1, rank + 1, piece);
+        if (move != null) if (legalForKing(piece, move)) moves.add(move);
+        move = getMove(file - 0, rank - 1, piece);
+        if (move != null) if (legalForKing(piece, move)) moves.add(move);
+        move = getMove(file - 0, rank + 1, piece);
+        if (move != null) if (legalForKing(piece, move)) moves.add(move);
+        move = getMove(file + 1, rank - 1, piece);
+        if (move != null) if (legalForKing(piece, move)) moves.add(move);
+        move = getMove(file + 1, rank - 0, piece);
+        if (move != null) if (legalForKing(piece, move)) moves.add(move);
+        move = getMove(file + 1, rank + 1, piece);
+        if (move != null) if (legalForKing(piece, move)) moves.add(move);
+        return moves;
+    }
+
+    private boolean legalForKing(PieceOnBoard piece, Move move) {
+        int rank = rankNumberFromSquare(move.getMove().to);
+        int file = fileNumberFromSquare(move.getMove().to);
+        PieceOnBoard pieceOnBoard;
+        pieceOnBoard = getPieceOnBoard(file - 1, rank - 0);
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        pieceOnBoard = getPieceOnBoard(file - 1, rank - 1);
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        pieceOnBoard = getPieceOnBoard(file - 0, rank - 1);
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        pieceOnBoard = getPieceOnBoard(file + 1, rank - 1);
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        pieceOnBoard = getPieceOnBoard(file + 1, rank - 0);
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        pieceOnBoard = getPieceOnBoard(file + 1, rank + 1);
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        pieceOnBoard = getPieceOnBoard(file + 0, rank + 1);
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        pieceOnBoard = getPieceOnBoard(file - 1, rank + 1);
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        return true;
+    }
+
+    private Move getMoveOnly(int file, int rank, PieceOnBoard piece) {
+        if (onBoard(file, rank)) {
+            String symbol = getSymbol(file, rank);
+            if (symbol == null) {
+                String toSquare = fileLetter(file) + rank;
+                Move move = Move.moveFromSquares(piece.getSquare(), toSquare);
+                return move;
+            }
+        }
+        return null;
+    }
+
+    private Move getMove(int file, int rank, PieceOnBoard piece) {
+        if (onBoard(file, rank)) {
+            String symbol = getSymbol(file, rank);
+            if (symbol == null) {
+                String toSquare = fileLetter(file) + rank;
+                Move move = Move.moveFromSquares(piece.getSquare(), toSquare);
+                return move;
+            } else {
+                return getAttackMove(file, rank, piece);
+            }
+        }
+        return null;
+    }
+
+    private boolean onBoard(int file, int rank) {
+        if ((file <= 0) || file > 8) return false;
+        if ((rank <= 0) || rank > 8) return false;
+        return true;
+    }
+
+    public boolean hasKing(Side side) {
+        return getPieces(side).stream().anyMatch(p -> p.getPiece() == KING);
+    }
+
+    public void makeMove(Move bestMove) {
+        int fileFrom = fileNumberFromSquare(bestMove.getMove().from);
+        int rankFrom = rankNumberFromSquare(bestMove.getMove().from);
+        Side side = getSide(fileFrom, rankFrom);
+        Piece piece = getPiece(fileFrom, rankFrom);
+        addPiece(side, piece, bestMove.getMove().to);
+        removePiece(bestMove.getMove().from);
+    }
+
+    public void addPiece(PieceOnBoard pieceOnBoard) {
+        addPiece(pieceOnBoard.getSide(), pieceOnBoard.getPiece(), pieceOnBoard.getSquare());
     }
 }

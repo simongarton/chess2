@@ -6,6 +6,10 @@ public class Main {
         Board board = new Board();
         board.setupDefaultBoard();
         System.out.println("");
-        System.out.println(board.showBoard());
+        System.out.println(board.showFormattedBoard());
+
+        Game game = new Game(board);
+        game.run();
+
     }
 }
