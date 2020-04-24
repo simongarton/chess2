@@ -128,4 +128,21 @@ public class Board {
     public String fileLetter(int file) {
         return Character.toString((char) (96 + file));
     }
+
+    public int getBoardValue(Side side) {
+        int value = 0;
+        for (int file = 1; file <= 8; file++) {
+            for (int rank = 1; rank <= 8; rank++) {
+                Piece piece = getPiece(file, rank);
+                if (piece == null) {
+                    continue;
+                }
+                Side pieceSide = getSide(file, rank);
+                if (side.equals(pieceSide)) {
+                    value = value + piece.getValue();
+                }
+            }
+        }
+        return value;
+    }
 }

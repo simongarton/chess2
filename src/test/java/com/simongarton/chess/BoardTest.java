@@ -66,6 +66,7 @@ class BoardTest {
     }
 
     @Test
-    void setBoard() {
+    void getBoardValue() {
+        assertEquals(49, board.getBoardValue(Side.WHITE));
     }
 }
