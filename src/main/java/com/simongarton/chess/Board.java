@@ -5,16 +5,20 @@ import com.simongarton.chess.model.Piece;
 import com.simongarton.chess.model.PieceOnBoard;
 import com.simongarton.chess.model.Side;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.simongarton.chess.model.Piece.*;
 import static com.simongarton.chess.model.Side.BLACK;
 import static com.simongarton.chess.model.Side.WHITE;
 
 @Getter
+@Setter
 public class Board {
 
     private String board;
@@ -159,7 +163,12 @@ public class Board {
     }
 
     public int getBoardValue(Side side) {
-        return getPieces(side).stream().mapToInt(c -> c.getPiece().getValue()).sum();
+        int pieceValue = getPieces(side).stream().mapToInt(c -> c.getPiece().getValue()).sum();
+        int moveValue = 0;
+        for (Move move : getMoves(side, false)) {
+            moveValue = moveValue + move.getInstantValue();
+        }
+        return pieceValue + moveValue;
     }
 
     public List<PieceOnBoard> getPieces(Side side) {
@@ -187,12 +196,38 @@ public class Board {
         return fileLetter(file) + rank;
     }
 
-    public List<Move> getMoves(Side side) {
+    public List<Move> getMoves(Side side, boolean calculateFutureValue) {
+        Side thisSide;
+        Side otherSide;
+        if (side == WHITE) {
+            thisSide = WHITE;
+            otherSide = BLACK;
+        } else {
+            thisSide = BLACK;
+            otherSide = WHITE;
+        }
         List<Move> moves = new ArrayList<>();
         for (PieceOnBoard piece : getPieces(side)) {
             moves.addAll(getMovesForPiece(piece));
         }
-        return moves;
+        if (calculateFutureValue) {
+            for (Move move : moves) {
+                Board newBoard = copyWithMove(move);
+                int newValue = newBoard.getBoardValue(thisSide) - newBoard.getBoardValue(otherSide);
+                move.setFutureValue(newValue);
+            }
+        }
+        int topValue = moves.stream().mapToInt(Move::getInstantValue).max().orElse(0);
+        List<Move> topMoves = moves.stream().filter(m -> m.getInstantValue() == topValue).collect(Collectors.toList());
+        topMoves.sort(Comparator.comparing(Move::getInstantValue).reversed().thenComparing(Move::getFutureValue).reversed());
+        return topMoves;
+    }
+
+    private Board copyWithMove(Move move) {
+        Board board = new Board();
+        board.setBoard(getBoard());
+        board.makeMove(move);
+        return board;
     }
 
     private List<Move> getMovesForPiece(PieceOnBoard piece) {
@@ -279,16 +314,17 @@ public class Board {
             rank = rank + rankDelta;
             if ((file == 0) || (file == 9)) break;
             if ((rank == 0) || (rank == 9)) break;
-            move = getMove(file, rank, piece);
+            move = getAttackMove(file, rank, piece);
             if (move != null) {
                 moves.add(move);
                 break;
             }
-//            move = getAttackMove(file, rank, piece);
-//            if (move != null) {
-//                moves.add(move);
-//                break;
-//            }
+            move = getMoveOnly(file, rank, piece);
+            if (move != null) {
+                moves.add(move);
+            } else {
+                break;
+            }
         }
         return moves;
     }
@@ -308,7 +344,7 @@ public class Board {
         Move move;
         move = getMoveOnly(file, rank + 1, piece);
         if (move != null) moves.add(move);
-        if (rank == 2) {
+        if ((rank == 2) && !moves.isEmpty()) {
             move = getMoveOnly(file, rank + 2, piece);
             if (move != null) moves.add(move);
         }
@@ -328,7 +364,7 @@ public class Board {
         Move move;
         move = getMoveOnly(file, rank - 1, piece);
         if (move != null) moves.add(move);
-        if (rank == 2) {
+        if ((rank == 2) && !moves.isEmpty()) {
             move = getMoveOnly(file, rank - 2, piece);
             if (move != null) moves.add(move);
         }
@@ -354,8 +390,9 @@ public class Board {
             return null;
         }
         String toSquare = fileLetter(file) + rank;
-        Move move = Move.moveFromSquares(piece.getSquare(), toSquare);
+        Move move = Move.moveFromSquares(piece.description(), piece.getSquare(), toSquare);
         move.setNotes("takes " + pieceOnBoard.description());
+        move.setInstantValue(pieceOnBoard.getPiece().getValue());
         return move;
     }
 
@@ -389,21 +426,29 @@ public class Board {
         int file = fileNumberFromSquare(move.getMove().to);
         PieceOnBoard pieceOnBoard;
         pieceOnBoard = getPieceOnBoard(file - 1, rank - 0);
-        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide())))
+            return false;
         pieceOnBoard = getPieceOnBoard(file - 1, rank - 1);
-        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide())))
+            return false;
         pieceOnBoard = getPieceOnBoard(file - 0, rank - 1);
-        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide())))
+            return false;
         pieceOnBoard = getPieceOnBoard(file + 1, rank - 1);
-        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide())))
+            return false;
         pieceOnBoard = getPieceOnBoard(file + 1, rank - 0);
-        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide())))
+            return false;
         pieceOnBoard = getPieceOnBoard(file + 1, rank + 1);
-        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide())))
+            return false;
         pieceOnBoard = getPieceOnBoard(file + 0, rank + 1);
-        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide())))
+            return false;
         pieceOnBoard = getPieceOnBoard(file - 1, rank + 1);
-        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide()))) return false;
+        if ((pieceOnBoard != null) && (pieceOnBoard.getPiece().equals(KING)) && (!pieceOnBoard.getSide().equals(piece.getSide())))
+            return false;
         return true;
     }
 
@@ -412,7 +457,7 @@ public class Board {
             String symbol = getSymbol(file, rank);
             if (symbol == null) {
                 String toSquare = fileLetter(file) + rank;
-                Move move = Move.moveFromSquares(piece.getSquare(), toSquare);
+                Move move = Move.moveFromSquares(piece.description(), piece.getSquare(), toSquare);
                 return move;
             }
         }
@@ -424,7 +469,7 @@ public class Board {
             String symbol = getSymbol(file, rank);
             if (symbol == null) {
                 String toSquare = fileLetter(file) + rank;
-                Move move = Move.moveFromSquares(piece.getSquare(), toSquare);
+                Move move = Move.moveFromSquares(piece.description(), piece.getSquare(), toSquare);
                 return move;
             } else {
                 return getAttackMove(file, rank, piece);

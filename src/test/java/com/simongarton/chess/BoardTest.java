@@ -101,7 +101,7 @@ class BoardTest {
         board.addPiece(PieceOnBoard.builder().side(Side.BLACK).piece(Piece.ROOK).square("e6").build());
         board.addPiece(PieceOnBoard.builder().side(Side.WHITE).piece(Piece.PAWN).square("b5").build());
         List<Move> moves = board.getMovesForRook(pieceOnBoard);
-        assertEquals(4,moves.size());
+        assertEquals(5,moves.size());
     }
 
     @Test
@@ -132,7 +132,10 @@ class BoardTest {
         board.addPiece(PieceOnBoard.builder().side(Side.WHITE).piece(Piece.PAWN).square("d8").build());
         board.addPiece(PieceOnBoard.builder().side(Side.BLACK).piece(Piece.ROOK).square("f6").build());
         List<Move> moves = board.getMovesForQueen(pieceOnBoard);
-        assertEquals(8,moves.size());
+        for (Move move : moves) {
+            System.out.println(move.description());
+        }
+        assertEquals(16,moves.size());
     }
 
     @Test
@@ -164,6 +167,34 @@ class BoardTest {
         board.addPiece(PieceOnBoard.builder().side(Side.WHITE).piece(Piece.PAWN).square("a7").build());
         List<Move> moves = board.getMovesForKing(pieceOnBoard);
         assertEquals(5,moves.size());
+    }
+
+    @Test
+    void testBoardValue() {
+        PieceOnBoard pieceOnBoard = PieceOnBoard.builder()
+                .side(Side.WHITE)
+                .piece(Piece.KNIGHT)
+                .square("b6")
+                .build();
+        int value = board.getBoardValue(Side.WHITE);
+        assertEquals(49, value);
+        board.addPiece(pieceOnBoard);
+        value = board.getBoardValue(Side.WHITE);
+        assertEquals(61, value);
+        value = board.getBoardValue(Side.BLACK);
+        assertEquals(55, value);
+    }
+
+    @Test
+    void testBadRookMove() {
+        PieceOnBoard pieceOnBoard = PieceOnBoard.builder()
+                .side(Side.WHITE)
+                .piece(Piece.ROOK)
+                .square("a1")
+                .build();
+        board.addPiece(pieceOnBoard);
+        List<Move> moves = board.getMovesForRook(pieceOnBoard);
+        assertEquals(0,moves.size());
     }
 
 }

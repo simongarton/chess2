@@ -9,7 +9,7 @@ public class Main {
         System.out.println(board.showFormattedBoard());
 
         Game game = new Game(board);
-        game.run();
+        System.out.println(game.run().getName());
 
     }
 }
