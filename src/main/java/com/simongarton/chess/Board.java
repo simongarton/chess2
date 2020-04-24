@@ -163,11 +163,13 @@ public class Board {
     }
 
     public int getBoardValue(Side side) {
+        // get the right now what pieces do I have value
         int pieceValue = getPieces(side).stream().mapToInt(c -> c.getPiece().getValue()).sum();
         int moveValue = 0;
-        for (Move move : getMoves(side, false)) {
-            moveValue = moveValue + move.getInstantValue();
-        }
+        // add in the I will then be able to take pieces from the other side value
+//        for (Move move : getMoves(side, false, inCheck(side))) {
+//            moveValue = moveValue + move.getInstantValue();
+//        }
         return pieceValue + moveValue;
     }
 
@@ -196,7 +198,7 @@ public class Board {
         return fileLetter(file) + rank;
     }
 
-    public List<Move> getMoves(Side side, boolean calculateFutureValue) {
+    public List<Move> getMoves(Side side, boolean calculateFutureValue, boolean inCheck) {
         Side thisSide;
         Side otherSide;
         if (side == WHITE) {
@@ -217,15 +219,28 @@ public class Board {
                 move.setFutureValue(newValue);
             }
         }
-        int topValue = moves.stream().mapToInt(Move::getInstantValue).max().orElse(0);
-        List<Move> topMoves = moves.stream().filter(m -> m.getInstantValue() == topValue).collect(Collectors.toList());
+        List<Move> topMoves;
+        if (inCheck) {
+            topMoves = moves;
+        } else {
+            int topValue = moves.stream().mapToInt(Move::getInstantValue).max().orElse(0);
+            topMoves = moves.stream().filter(m -> m.getInstantValue() == topValue).collect(Collectors.toList());
+        }
         topMoves.sort(Comparator.comparing(Move::getInstantValue).reversed().thenComparing(Move::getFutureValue).reversed());
         return topMoves;
     }
 
+    public List<Move> getMoves(Side side) {
+        List<Move> moves = new ArrayList<>();
+        for (PieceOnBoard piece : getPieces(side)) {
+            moves.addAll(getMovesForPiece(piece));
+        }
+        return moves;
+    }
+
     private Board copyWithMove(Move move) {
         Board board = new Board();
-        board.setBoard(getBoard());
+        board.setBoard("" + getBoard());
         board.makeMove(move);
         return board;
     }
@@ -469,8 +484,7 @@ public class Board {
             String symbol = getSymbol(file, rank);
             if (symbol == null) {
                 String toSquare = fileLetter(file) + rank;
-                Move move = Move.moveFromSquares(piece.description(), piece.getSquare(), toSquare);
-                return move;
+                return Move.moveFromSquares(piece.description(), piece.getSquare(), toSquare);
             } else {
                 return getAttackMove(file, rank, piece);
             }
@@ -488,16 +502,45 @@ public class Board {
         return getPieces(side).stream().anyMatch(p -> p.getPiece() == KING);
     }
 
-    public void makeMove(Move bestMove) {
+    public boolean makeMove(Move bestMove) {
         int fileFrom = fileNumberFromSquare(bestMove.getMove().from);
         int rankFrom = rankNumberFromSquare(bestMove.getMove().from);
         Side side = getSide(fileFrom, rankFrom);
         Piece piece = getPiece(fileFrom, rankFrom);
         addPiece(side, piece, bestMove.getMove().to);
         removePiece(bestMove.getMove().from);
+        if (inCheck(side)) {
+            return false;
+        }
+        return true;
     }
 
     public void addPiece(PieceOnBoard pieceOnBoard) {
         addPiece(pieceOnBoard.getSide(), pieceOnBoard.getPiece(), pieceOnBoard.getSquare());
+    }
+
+    public void loadFromRanks(String rank1, String rank2, String rank3, String rank4, String rank5, String rank6, String rank7, String rank8) {
+        clearBoard();
+        board = rank1 + rank2 + rank3 + rank4 + rank5 + rank6 + rank7 + rank8;
+    }
+
+    public void loadFromRanksReverse(String rank8, String rank7, String rank6, String rank5, String rank4, String rank3, String rank2, String rank1) {
+        clearBoard();
+        board = rank1 + rank2 + rank3 + rank4 + rank5 + rank6 + rank7 + rank8;
+    }
+
+    public boolean inCheck(Side side) {
+        Side thisSide;
+        Side otherSide;
+        if (side == WHITE) {
+            thisSide = WHITE;
+            otherSide = BLACK;
+        } else {
+            thisSide = BLACK;
+            otherSide = WHITE;
+        }
+        List<Move> otherMoves = getMoves(otherSide);
+        boolean inCheck = otherMoves.stream().filter(m -> m.getNotes() != null).anyMatch(m -> m.getNotes().toLowerCase().contains("king"));
+        return inCheck;
     }
 }

@@ -5,7 +5,7 @@ import lombok.Getter;
 @Getter
 public enum Piece {
 
-    KING("K","King",10),
+    KING("K","King",1000),
     QUEEN("Q","Queen",9),
     BISHOP("B","Bishop",3),
     KNIGHT("N","Knight",3),

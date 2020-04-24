@@ -8,6 +8,9 @@ import lombok.Setter;
 
 import java.util.List;
 
+import static com.simongarton.chess.model.Side.BLACK;
+import static com.simongarton.chess.model.Side.WHITE;
+
 @Getter
 @Setter
 public class Game {
@@ -37,23 +40,25 @@ public class Game {
     }
 
     private Outcome playWhite(int move) {
-        List<Move> moves = board.getMoves(Side.WHITE, true);
+        boolean inCheck = board.inCheck(WHITE);
+        List<Move> moves = board.getMoves(WHITE, true, inCheck);
         if (moves.isEmpty()) {
             return Outcome.STALEMATE;
         }
-        List<Move> otherMoves = board.getMoves(Side.BLACK, false);
-        boolean inCheck = otherMoves.stream().filter(m -> m.getNotes() !=null).anyMatch(m -> m.getNotes().toLowerCase().contains("king"));
         Move bestMove = moves.get(0);
-        String line = move + " : " + Side.WHITE.getName() + " : " + bestMove.description();
+        String line = move + " : " + WHITE.getName() + " : " + bestMove.description();
         if (inCheck) {
             line = line + " (in check)";
         }
         System.out.println(line);
-        for (Move possibleMove: moves) {
-            System.out.println("  " + possibleMove.description());
-        }
+//        for (Move possibleMove : moves) {
+//            System.out.println(" - " + possibleMove.description());
+//        }
 
-        board.makeMove(bestMove);
+        boolean stillAlive = board.makeMove(bestMove);
+        if (!stillAlive) {
+//            return Outcome.BLACK_WINS;
+        }
         if (!board.hasKing(Side.BLACK)) {
             return Outcome.WHITE_WINS;
         }
@@ -61,24 +66,26 @@ public class Game {
     }
 
     private Outcome playBlack(int move) {
-        List<Move> moves = board.getMoves(Side.BLACK, true);
+        boolean inCheck = board.inCheck(BLACK);
+        List<Move> moves = board.getMoves(Side.BLACK, true, inCheck);
         if (moves.isEmpty()) {
             return Outcome.STALEMATE;
         }
-        List<Move> otherMoves = board.getMoves(Side.WHITE, false);
-        boolean inCheck = otherMoves.stream().filter(m -> m.getNotes() !=null).anyMatch(m -> m.getNotes().toLowerCase().contains("king"));
         Move bestMove = moves.get(0);
         String line = move + " : " + Side.BLACK.getName() + " : " + bestMove.description();
         if (inCheck) {
             line = line + " (in check)";
         }
-
         System.out.println(line);
-        for (Move possibleMove: moves) {
-            System.out.println("  " + possibleMove.description());
+        for (Move possibleMove : moves) {
+            System.out.println(" - " + possibleMove.description());
         }
-        board.makeMove(bestMove);
-        if (!board.hasKing(Side.WHITE)) {
+
+        boolean stillAlive = board.makeMove(bestMove);
+        if (!stillAlive) {
+//            return Outcome.WHITE_WINS;
+        }
+        if (!board.hasKing(WHITE)) {
             return Outcome.BLACK_WINS;
         }
         return Outcome.PLAY;

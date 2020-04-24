@@ -83,7 +83,7 @@ class BoardTest {
                 .build();
         board.addPiece(pieceOnBoard);
         List<Move> moves = board.getMovesForPawn(pieceOnBoard);
-        assertEquals(2,moves.size());
+        assertEquals(2, moves.size());
         assertEquals("a3", moves.get(0).getMove().getTo());
         assertEquals("a4", moves.get(1).getMove().getTo());
     }
@@ -101,7 +101,7 @@ class BoardTest {
         board.addPiece(PieceOnBoard.builder().side(Side.BLACK).piece(Piece.ROOK).square("e6").build());
         board.addPiece(PieceOnBoard.builder().side(Side.WHITE).piece(Piece.PAWN).square("b5").build());
         List<Move> moves = board.getMovesForRook(pieceOnBoard);
-        assertEquals(5,moves.size());
+        assertEquals(5, moves.size());
     }
 
     @Test
@@ -116,7 +116,7 @@ class BoardTest {
         board.addPiece(PieceOnBoard.builder().side(Side.BLACK).piece(Piece.ROOK).square("c5").build());
         board.addPiece(PieceOnBoard.builder().side(Side.WHITE).piece(Piece.PAWN).square("d8").build());
         List<Move> moves = board.getMovesForBishop(pieceOnBoard);
-        assertEquals(4,moves.size());
+        assertEquals(4, moves.size());
     }
 
     @Test
@@ -135,7 +135,7 @@ class BoardTest {
         for (Move move : moves) {
             System.out.println(move.description());
         }
-        assertEquals(16,moves.size());
+        assertEquals(16, moves.size());
     }
 
     @Test
@@ -150,7 +150,7 @@ class BoardTest {
         board.addPiece(PieceOnBoard.builder().side(Side.BLACK).piece(Piece.ROOK).square("d7").build());
         board.addPiece(PieceOnBoard.builder().side(Side.WHITE).piece(Piece.PAWN).square("d5").build());
         List<Move> moves = board.getMovesForKnight(pieceOnBoard);
-        assertEquals(5,moves.size());
+        assertEquals(5, moves.size());
     }
 
     @Test
@@ -166,7 +166,7 @@ class BoardTest {
         board.addPiece(PieceOnBoard.builder().side(Side.WHITE).piece(Piece.PAWN).square("c8").build());
         board.addPiece(PieceOnBoard.builder().side(Side.WHITE).piece(Piece.PAWN).square("a7").build());
         List<Move> moves = board.getMovesForKing(pieceOnBoard);
-        assertEquals(5,moves.size());
+        assertEquals(5, moves.size());
     }
 
     @Test
@@ -194,7 +194,33 @@ class BoardTest {
                 .build();
         board.addPiece(pieceOnBoard);
         List<Move> moves = board.getMovesForRook(pieceOnBoard);
-        assertEquals(0,moves.size());
+        assertEquals(0, moves.size());
     }
 
+    @Test
+    void strangeMove1() {
+        board.loadFromRanksReverse(
+                "rnb.kbnr",
+                "pppp.ppp",
+                "....p...",
+                "........",
+                "P.......",
+                ".....N..",
+                ".PPPPqPP",
+                "RNBQKB.R"
+
+        );
+        System.out.println(board.showFormattedBoard());
+        System.out.println(board.inCheck(Side.BLACK));
+        PieceOnBoard pieceOnBoard = PieceOnBoard.builder()
+                .side(Side.WHITE)
+                .piece(Piece.KING)
+                .square("e1")
+                .build();
+        board.addPiece(pieceOnBoard);
+        List<Move> pieceMoves = board.getMovesForKing(pieceOnBoard);
+        for (Move move : pieceMoves) {
+            System.out.println(move.description());
+        }
+    }
 }
