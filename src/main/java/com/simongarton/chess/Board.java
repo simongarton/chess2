@@ -222,15 +222,14 @@ public class Board {
         List<Move> topMoves;
         if (inCheck) {
             topMoves = moves;
+            topMoves.sort(Comparator.comparing(m -> ((Move) m).getInstantValue() + ((Move) m).getFutureValue()).reversed());
         } else {
-            int topValue = moves.stream().mapToInt(Move::getInstantValue).max().orElse(0);
-            topMoves = moves.stream().filter(m -> m.getInstantValue() == topValue).collect(Collectors.toList());
+            int topValue = moves.stream().mapToInt(m -> m.getInstantValue() + m.getFutureValue()).max().orElse(0);
+            topMoves = moves.stream().filter(m -> (m.getInstantValue() + m.getFutureValue()) == topValue).collect(Collectors.toList());
+            Collections.shuffle(topMoves);
         }
         // This comparator wasn't working correctly, it was sorting on instantValue normally, not reversed.
         //topMoves.sort(Comparator.comparing(Move::getInstantValue).reversed().thenComparing(Move::getFutureValue).reversed());
-        topMoves.sort(Comparator.comparing(m -> ((Move) m).getInstantValue() + ((Move) m).getFutureValue()).reversed());
-        int topValue = moves.stream().mapToInt(Move::getInstantValue).max().orElse(0);
-        System.out.println("top " + topValue + " moves " + moves.size() + " topMoves " + topMoves.size() + " best " + topMoves.get(0).description());
         return topMoves;
     }
 

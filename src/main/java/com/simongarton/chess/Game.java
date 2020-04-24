@@ -51,7 +51,7 @@ public class Game {
             line = line + " (in check)";
         }
         System.out.println(line);
-        
+
         boolean stillAlive = board.makeMove(bestMove);
         if (!board.hasKing(Side.BLACK)) {
             return Outcome.WHITE_WINS;
