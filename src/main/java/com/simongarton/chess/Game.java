@@ -51,14 +51,8 @@ public class Game {
             line = line + " (in check)";
         }
         System.out.println(line);
-//        for (Move possibleMove : moves) {
-//            System.out.println(" - " + possibleMove.description());
-//        }
-
+        
         boolean stillAlive = board.makeMove(bestMove);
-        if (!stillAlive) {
-//            return Outcome.BLACK_WINS;
-        }
         if (!board.hasKing(Side.BLACK)) {
             return Outcome.WHITE_WINS;
         }
@@ -77,14 +71,8 @@ public class Game {
             line = line + " (in check)";
         }
         System.out.println(line);
-        for (Move possibleMove : moves) {
-            System.out.println(" - " + possibleMove.description());
-        }
 
         boolean stillAlive = board.makeMove(bestMove);
-        if (!stillAlive) {
-//            return Outcome.WHITE_WINS;
-        }
         if (!board.hasKing(WHITE)) {
             return Outcome.BLACK_WINS;
         }
