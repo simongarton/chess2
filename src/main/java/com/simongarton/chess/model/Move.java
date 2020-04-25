@@ -30,7 +30,7 @@ public class Move {
 
     public String description() {
         if (notes == null) {
-            return piece + " " + move.from + "->" + move.to + " (" + instantValue + "/" + futureValue + ") ";
+            return piece + " " + move.from + "->" + move.to + " (" + instantValue + "/" + futureValue + ")";
         }
         return piece + " " + move.from + "->" + move.to + " (" + instantValue + "/" + futureValue + ") " + notes;
     }

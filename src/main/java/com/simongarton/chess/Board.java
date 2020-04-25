@@ -172,13 +172,14 @@ public class Board {
     public int getBoardValue(Side side) {
         // get the right now what pieces do I have value
         int pieceValue = getPieces(side).stream().mapToInt(c -> c.getPiece().getValue()).sum();
-        if (inCheck(side)) pieceValue = pieceValue = KING.getValue();
+        int checkValue = 0;
+        if (inCheck(side)) checkValue = - KING.getValue();
         int moveValue = 0;
         // add in the I will then be able to take pieces from the other side value
 //        for (Move move : getMoves(side, false, inCheck(side))) {
 //            moveValue = moveValue + move.getInstantValue();
 //        }
-        return pieceValue + moveValue;
+        return pieceValue + checkValue +  moveValue;
     }
 
     public List<PieceOnBoard> getPieces(Side side) {
@@ -249,7 +250,7 @@ public class Board {
         return moves;
     }
 
-    private Board copyWithMove(Move move) {
+    protected Board copyWithMove(Move move) {
         Board board = new Board();
         board.setBoard("" + getBoard());
         board.makeMove(move);
@@ -550,18 +551,9 @@ public class Board {
     }
 
     public boolean inCheck(Side side) {
-        Side thisSide;
-        Side otherSide;
-        if (side == WHITE) {
-            thisSide = WHITE;
-            otherSide = BLACK;
-        } else {
-            thisSide = BLACK;
-            otherSide = WHITE;
-        }
+        Side otherSide = side == WHITE ? BLACK : WHITE;
         List<Move> otherMoves = getMoves(otherSide);
-        boolean inCheck = otherMoves.stream().filter(m -> m.getNotes() != null).anyMatch(m -> m.getNotes().toLowerCase().contains("king"));
-        return inCheck;
+        return otherMoves.stream().filter(m -> m.getNotes() != null).anyMatch(m -> m.getNotes().toLowerCase().contains("king"));
     }
 
     public int totalPieceCount() {
