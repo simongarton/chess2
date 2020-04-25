@@ -248,4 +248,56 @@ class BoardTest {
         assertEquals(21, moves.size());
         assertEquals("White King e1->f2 (0/-21)", moves.get(0).description());
     }
+
+    @Test
+    void willItDefend() {
+        board.loadFromRanksReverse(
+                "rnb.kbnr",
+                "pppp.ppp",
+                "....p...",
+                "........",
+                "P.......",
+                "...N....",
+                ".PPPPPPP",
+                "q...KB.R"
+
+        );
+        System.out.println(board.showFormattedBoard());
+        System.out.println(board.inCheck(Side.WHITE));
+        System.out.println(board.inCheck(Side.BLACK));
+        PieceOnBoard pieceOnBoard = PieceOnBoard.builder()
+                .side(Side.WHITE)
+                .piece(Piece.KNIGHT)
+                .square("d3")
+                .build();
+        board.addPiece(pieceOnBoard);
+        System.out.println("White " + board.getBoardValue(Side.WHITE));
+        System.out.println("Black " + board.getBoardValue(Side.BLACK));
+        List<Move> pieceMoves = board.getMovesForKnight(pieceOnBoard);
+        for (Move move : pieceMoves) {
+            Board newBoard = board.copyWithMove(move);
+            int blackValue = newBoard.getBoardValue(Side.BLACK);
+            int whiteValue = newBoard.getBoardValue(Side.WHITE);
+            System.out.println("\n" + move.description() + "\n");
+            System.out.println(newBoard.showFormattedBoard());
+            System.out.println("White " + whiteValue + " " + newBoard.inCheck(Side.WHITE));
+            System.out.println("Black " + blackValue + " " + newBoard.inCheck(Side.BLACK));
+            System.out.println("");
+
+            int newValue = whiteValue - blackValue;
+            move.setFutureValue(newValue);
+        }
+
+        for (Move move : pieceMoves) {
+            System.out.println(move.description());
+        }
+
+        List<Move> moves = board.getMoves(Side.WHITE, true, board.inCheck(Side.WHITE));
+        for (Move move : moves) {
+            System.out.println(" - " + move.description());
+        }
+
+        assertEquals(20, moves.size());
+        assertEquals("White Knight d3->c1 (0/-20)", moves.get(0).description());
+    }
 }
